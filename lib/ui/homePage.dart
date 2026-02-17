@@ -1,15 +1,22 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/legacy.dart';
+import 'package:getaqi/extras/appColors.dart';
+import 'package:getaqi/extras/appPath.dart';
 import 'package:getaqi/providers/aqiProvides/aqiProviders.dart';
 import 'package:getaqi/ui/news/news.dart';
+import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 // AI Suggestion Provider with DeepSeek API (FREE)
-final aiSuggestionProvider = FutureProvider.autoDispose.family<String, Map<String, dynamic>>((ref, params) async {
+final aiSuggestionProvider = FutureProvider.autoDispose.family<String, Map<String, dynamic>>((
+    ref,
+    params,
+    ) async {
   final city = params['city'];
   final aqi = params['aqi'];
   final level = params['level'];
@@ -34,12 +41,14 @@ final aiSuggestionProvider = FutureProvider.autoDispose.family<String, Map<Strin
         'messages': [
           {
             'role': 'system',
-            'content': 'You are a health and environmental expert. Provide concise, actionable AQI-based health recommendations. Format as 3-4 bullet points without markdown.'
+            'content':
+            'You are a health and environmental expert. Provide concise, actionable AQI-based health recommendations. Format as 3-4 bullet points without markdown.',
           },
           {
             'role': 'user',
-            'content': 'The Air Quality Index in $city is $aqi which is "$level" level. Provide specific health recommendations for this air quality level. Be practical and helpful.'
-          }
+            'content':
+            'The Air Quality Index in $city is $aqi which is "$level" level. Provide specific health recommendations for this air quality level. Be practical and helpful.',
+          },
         ],
         'max_tokens': 150,
         'temperature': 0.7,
@@ -99,7 +108,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     _monitoringTimer = Timer.periodic(const Duration(minutes: 5), (timer) {
       if (mounted) {
         ref.read(monitoredCitiesProvider.notifier).state = [
-          ...ref.read(monitoredCitiesProvider)
+          ...ref.read(monitoredCitiesProvider),
         ];
       }
     });
@@ -126,9 +135,11 @@ class _HomePageState extends ConsumerState<HomePage> {
   String _getAqiDescription(double aqi) {
     if (aqi <= 50) return 'Air quality is satisfactory';
     if (aqi <= 100) return 'Air quality is acceptable';
-    if (aqi <= 150) return 'Members of sensitive groups may experience health effects';
+    if (aqi <= 150)
+      return 'Members of sensitive groups may experience health effects';
     if (aqi <= 200) return 'Everyone may begin to experience health effects';
-    if (aqi <= 300) return 'Health alert: everyone may experience more serious health effects';
+    if (aqi <= 300)
+      return 'Health alert: everyone may experience more serious health effects';
     return 'Health warning of emergency conditions';
   }
 
@@ -148,7 +159,8 @@ class _HomePageState extends ConsumerState<HomePage> {
     } catch (e) {
       print('Error fetching AI suggestion: $e');
       setState(() {
-        _citySuggestions[cityName] = 'Failed to load suggestions. Please try again.';
+        _citySuggestions[cityName] =
+        'Failed to load suggestions. Please try again.';
       });
     }
   }
@@ -156,23 +168,41 @@ class _HomePageState extends ConsumerState<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: _buildDrawer(),
       appBar: AppBar(
         title: const Text(
           'AQI Checker',
-          style: TextStyle(fontWeight: FontWeight.w600),
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.5,
+          ),
         ),
         centerTitle: true,
         elevation: 0,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppColors.primaryColor,
+                AppColors.secondaryColor,
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
               ref.read(monitoredCitiesProvider.notifier).state = [
-                ...ref.read(monitoredCitiesProvider)
+                ...ref.read(monitoredCitiesProvider),
               ];
             },
           ),
+          const SizedBox(width: 8),
         ],
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -200,12 +230,243 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
+  Widget _buildDrawer() {
+    return Drawer(
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.only(
+          topRight: Radius.circular(24),
+          bottomRight: Radius.circular(24),
+        ),
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              AppColors.primaryColor.withOpacity(0.95),
+              AppColors.secondaryColor.withOpacity(0.95),
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              // Drawer Header with User Info
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
+                child: Column(
+                  children: [
+                    Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 3),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 10,
+                            offset: const Offset(0, 5),
+                          ),
+                        ],
+                      ),
+                      child: const CircleAvatar(
+                        backgroundColor: Colors.white,
+                        child: Icon(
+                          Icons.person,
+                          size: 40,
+                          color: AppColors.primaryColor,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Guest User',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Sign in to access more features',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.8),
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const Divider(color: Colors.white30, thickness: 1),
+
+              // Drawer Menu Items
+              Expanded(
+                child: ListView(
+                  padding: EdgeInsets.zero,
+                  children: [
+                    _buildDrawerItem(
+                      icon: Icons.dashboard,
+                      title: 'Dashboard',
+                      onTap: () {
+                        Navigator.pop(context);
+                        // Navigate to dashboard if needed
+                      },
+                    ),
+                    _buildDrawerItem(
+                      icon: Icons.location_city,
+                      title: 'Monitored Cities',
+                      onTap: () {
+                        Navigator.pop(context);
+                        // Scroll to monitored cities section
+                      },
+                    ),
+                    _buildDrawerItem(
+                      icon: Icons.article,
+                      title: 'AQI News',
+                      onTap: () {
+                        Navigator.pop(context);
+                        context.push('/news');
+                      },
+                    ),
+                    _buildDrawerItem(
+                      icon: Icons.psychology,
+                      title: 'AI Recommendations',
+                      onTap: () {
+                        Navigator.pop(context);
+                        // Show AI recommendations
+                      },
+                    ),
+
+                    const Divider(color: Colors.white30, thickness: 1),
+
+                    _buildDrawerItem(
+                      icon: Icons.person,
+                      title: 'Profile',
+                      onTap: () {
+                        Navigator.pop(context);
+                        context.push(AppPath.userPage);
+                      },
+                    ),
+                    _buildDrawerItem(
+                      icon: Icons.login,
+                      title: 'Login',
+                      onTap: () {
+                        Navigator.pop(context);
+                        context.push(AppPath.login);
+                      },
+                    ),
+                    _buildDrawerItem(
+                      icon: Icons.lock_open,
+                      title: 'Bloc Auth',
+                      onTap: () {
+                        Navigator.pop(context);
+                        context.push(AppPath.login_bloc);
+                      },
+                    ),
+
+                    const Divider(color: Colors.white30, thickness: 1),
+
+                    _buildDrawerItem(
+                      icon: Icons.settings,
+                      title: 'Settings',
+                      onTap: () {
+                        Navigator.pop(context);
+                        // Navigate to settings
+                      },
+                    ),
+                    _buildDrawerItem(
+                      icon: Icons.help,
+                      title: 'Help & Support',
+                      onTap: () {
+                        Navigator.pop(context);
+                        // Navigate to help
+                      },
+                    ),
+                    _buildDrawerItem(
+                      icon: Icons.info,
+                      title: 'About',
+                      onTap: () {
+                        Navigator.pop(context);
+                        // Show about dialog
+                      },
+                    ),
+                  ],
+                ),
+              ),
+
+              // Footer
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    Text(
+                      'Version 1.0.0',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.6),
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '© 2024 AQI Checker',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.6),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDrawerItem({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+    bool isSelected = false,
+  }) {
+    return ListTile(
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.white : Colors.white.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(
+          icon,
+          color: isSelected ? AppColors.primaryColor : Colors.white,
+          size: 20,
+        ),
+      ),
+      title: Text(
+        title,
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 16,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        ),
+      ),
+      onTap: onTap,
+      hoverColor: Colors.white.withOpacity(0.1),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+      ),
+    );
+  }
+
   Widget _searchCard() {
     return Card(
       elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Row(
@@ -242,7 +503,10 @@ class _HomePageState extends ConsumerState<HomePage> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
               ),
               child: const Text('Monitor'),
             ),
@@ -256,9 +520,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     if (city.isEmpty) {
       return Card(
         elevation: 6,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         child: const Padding(
           padding: EdgeInsets.all(20),
           child: Center(
@@ -287,14 +549,10 @@ class _HomePageState extends ConsumerState<HomePage> {
     final aqiAsync = ref.watch(aqiProvider(city));
 
     return aqiAsync.when(
-      loading: () => const Center(
-        child: CircularProgressIndicator(),
-      ),
+      loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Card(
         elevation: 6,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Center(
@@ -340,10 +598,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(24),
                   gradient: LinearGradient(
-                    colors: [
-                      color.withOpacity(0.9),
-                      color,
-                    ],
+                    colors: [color.withOpacity(0.9), color],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -388,7 +643,11 @@ class _HomePageState extends ConsumerState<HomePage> {
                     ),
                     if (aqi > 100) ...[
                       const SizedBox(height: 10),
-                      const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 24),
+                      const Icon(
+                        Icons.warning_amber_rounded,
+                        color: Colors.white,
+                        size: 24,
+                      ),
                     ],
                   ],
                 ),
@@ -409,9 +668,7 @@ class _HomePageState extends ConsumerState<HomePage> {
 
     return Card(
       elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       margin: const EdgeInsets.only(top: 16),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -424,23 +681,21 @@ class _HomePageState extends ConsumerState<HomePage> {
                 const SizedBox(width: 8),
                 const Text(
                   'AI Health Recommendations',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                 ),
               ],
             ),
             const SizedBox(height: 12),
-            Text(
-              suggestion,
-              style: const TextStyle(fontSize: 14, height: 1.5),
-            ),
+            Text(suggestion, style: const TextStyle(fontSize: 14, height: 1.5)),
             const SizedBox(height: 8),
             const Divider(),
             const Text(
               'Powered by DeepSeek AI',
-              style: TextStyle(fontSize: 12, color: Colors.grey, fontStyle: FontStyle.italic),
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey,
+                fontStyle: FontStyle.italic,
+              ),
             ),
           ],
         ),
@@ -458,7 +713,11 @@ class _HomePageState extends ConsumerState<HomePage> {
           child: Center(
             child: Column(
               children: [
-                Icon(Icons.location_city_outlined, size: 40, color: Colors.grey[400]),
+                Icon(
+                  Icons.location_city_outlined,
+                  size: 40,
+                  color: Colors.grey[400],
+                ),
                 const SizedBox(height: 10),
                 const Text(
                   'No cities being monitored',
@@ -522,10 +781,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             leading: Container(
               width: 40,
               height: 40,
-              decoration: BoxDecoration(
-                color: color,
-                shape: BoxShape.circle,
-              ),
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
               child: Center(
                 child: Text(
                   aqi.toStringAsFixed(0),
@@ -552,10 +808,10 @@ class _HomePageState extends ConsumerState<HomePage> {
                 IconButton(
                   icon: const Icon(Icons.remove_circle, color: Colors.red),
                   onPressed: () {
-                    ref.read(monitoredCitiesProvider.notifier).state =
-                        ref.read(monitoredCitiesProvider)
-                            .where((c) => c != cityName)
-                            .toList();
+                    ref.read(monitoredCitiesProvider.notifier).state = ref
+                        .read(monitoredCitiesProvider)
+                        .where((c) => c != cityName)
+                        .toList();
                   },
                 ),
               ],
@@ -572,10 +828,11 @@ class _HomePageState extends ConsumerState<HomePage> {
       builder: (context) {
         return AlertDialog(
           title: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Icon(Icons.psychology, color: Colors.blue[700]),
               const SizedBox(width: 8),
-              Text('AI Suggestions for $cityName'),
+              Expanded(child: Text('AI Suggestions for $cityName')),
             ],
           ),
           content: SizedBox(
@@ -609,7 +866,6 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   Widget _cityGrid() {
     final cities = ["Delhi", "Mumbai", "Bhopal", "Pune"];
-
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -647,9 +903,9 @@ class _HomePageState extends ConsumerState<HomePage> {
       children: [
         Text(
           title,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
         ),
         const Spacer(),
         if (title == "Monitored Cities")
@@ -666,7 +922,11 @@ class GetCity extends ConsumerWidget {
   final String city;
   final VoidCallback? onAddToMonitor;
 
-  const GetCity({super.key, required this.city, this.onAddToMonitor});
+  const GetCity({
+    super.key,
+    required this.city,
+    this.onAddToMonitor,
+  });
 
   Color _getAqiColor(double aqi) {
     if (aqi <= 50) return Colors.green;
@@ -680,25 +940,21 @@ class GetCity extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final aqiAsync = ref.watch(aqiProvider(city));
-
     return aqiAsync.when(
       loading: () => Container(
+
         decoration: BoxDecoration(
           color: Colors.grey[200],
           borderRadius: BorderRadius.circular(20),
         ),
-        child: const Center(
-          child: CircularProgressIndicator(),
-        ),
+        child: const Center(child: CircularProgressIndicator()),
       ),
       error: (e, _) => Container(
         decoration: BoxDecoration(
           color: Colors.grey[200],
           borderRadius: BorderRadius.circular(20),
         ),
-        child: const Center(
-          child: Icon(Icons.error, color: Colors.red),
-        ),
+        child: const Center(child: Icon(Icons.error, color: Colors.red)),
       ),
       data: (data) {
         final aqi = data.aqi.toDouble();
@@ -706,6 +962,7 @@ class GetCity extends ConsumerWidget {
         return Stack(
           children: [
             Container(
+              width: MediaQuery.of(context).size.width * 0.9,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
@@ -748,10 +1005,7 @@ class GetCity extends ConsumerWidget {
                   const SizedBox(height: 4),
                   Text(
                     _getAqiLevel(aqi),
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 12,
-                    ),
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
                     textAlign: TextAlign.center,
                   ),
                   if (aqi > 100)
@@ -770,7 +1024,10 @@ class GetCity extends ConsumerWidget {
               top: 8,
               right: 8,
               child: IconButton(
-                icon: Icon(Icons.add_circle, color: Colors.white.withOpacity(0.9)),
+                icon: Icon(
+                  Icons.add_circle,
+                  color: Colors.white.withOpacity(0.9),
+                ),
                 iconSize: 20,
                 onPressed: onAddToMonitor,
               ),
