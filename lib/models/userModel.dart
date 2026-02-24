@@ -7,7 +7,7 @@ class User {
 
   User copyWith({String? name, bool? isLiked}) {
     return User(
-      id: this.id,
+      id: id,
       name: name ?? this.name,
       isLiked: isLiked ?? this.isLiked,
     );

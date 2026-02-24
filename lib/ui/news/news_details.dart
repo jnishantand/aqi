@@ -4,7 +4,7 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 class NewsWebView extends StatefulWidget {
   final String newsUrl;
 
-  const NewsWebView({Key? key, required this.newsUrl}) : super(key: key);
+  const NewsWebView({super.key, required this.newsUrl});
 
   @override
   _NewsWebViewState createState() => _NewsWebViewState();
@@ -42,9 +42,7 @@ class _NewsWebViewState extends State<NewsWebView> {
           // WebView
           Expanded(
             child: InAppWebView(
-              initialUrlRequest: URLRequest(
-                url: WebUri(widget.newsUrl),
-              ),
+              initialUrlRequest: URLRequest(url: WebUri(widget.newsUrl)),
               initialOptions: InAppWebViewGroupOptions(
                 crossPlatform: InAppWebViewOptions(
                   javaScriptEnabled: true,
@@ -53,12 +51,8 @@ class _NewsWebViewState extends State<NewsWebView> {
                   cacheEnabled: true,
                   transparentBackground: true,
                 ),
-                android: AndroidInAppWebViewOptions(
-                  useHybridComposition: true,
-                ),
-                ios: IOSInAppWebViewOptions(
-                  allowsInlineMediaPlayback: true,
-                ),
+                android: AndroidInAppWebViewOptions(useHybridComposition: true),
+                ios: IOSInAppWebViewOptions(allowsInlineMediaPlayback: true),
               ),
               onWebViewCreated: (controller) {
                 _webViewController = controller;
