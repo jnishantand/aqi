@@ -1,0 +1,17 @@
+{
+  "@@locale": "en",
+  "dashboard": "Dashboard",
+  "monitoredCities": "Monitored Cities",
+  "aqiNews": "AQI News",
+  "aiRecommendations": "AI Recommendations",
+  "profile": "Profile",
+  "login": "Login",
+  "logout": "Logout",
+  "settings": "Settings",
+  "helpSupport": "Help & Support",
+  "about": "About",
+  "guestUser": "Guest User",
+  "signInMore": "Sign in to access more features",
+  "changeLanguage": "Change Language",
+  "darkMode": "Dark Mode"
+}

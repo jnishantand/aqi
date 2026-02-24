@@ -1,12 +1,17 @@
 import 'dart:async';
-import 'dart:ui';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/legacy.dart';
+import 'package:getaqi/Services/aqi_log_service.dart';
 import 'package:getaqi/extras/appColors.dart';
 import 'package:getaqi/extras/appPath.dart';
+import 'package:getaqi/features/sensor_read/sensorController.dart';
+import 'package:getaqi/l10n/app_localizations.dart';
 import 'package:getaqi/providers/aqiProvides/aqiProviders.dart';
+import 'package:getaqi/providers/providers.dart';
 import 'package:getaqi/ui/news/news.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
@@ -14,9 +19,9 @@ import 'dart:convert';
 
 // AI Suggestion Provider with DeepSeek API (FREE)
 final aiSuggestionProvider = FutureProvider.autoDispose.family<String, Map<String, dynamic>>((
-    ref,
-    params,
-    ) async {
+  ref,
+  params,
+) async {
   final city = params['city'];
   final aqi = params['aqi'];
   final level = params['level'];
@@ -42,12 +47,12 @@ final aiSuggestionProvider = FutureProvider.autoDispose.family<String, Map<Strin
           {
             'role': 'system',
             'content':
-            'You are a health and environmental expert. Provide concise, actionable AQI-based health recommendations. Format as 3-4 bullet points without markdown.',
+                'You are a health and environmental expert. Provide concise, actionable AQI-based health recommendations. Format as 3-4 bullet points without markdown.',
           },
           {
             'role': 'user',
             'content':
-            'The Air Quality Index in $city is $aqi which is "$level" level. Provide specific health recommendations for this air quality level. Be practical and helpful.',
+                'The Air Quality Index in $city is $aqi which is "$level" level. Provide specific health recommendations for this air quality level. Be practical and helpful.',
           },
         ],
         'max_tokens': 150,
@@ -135,11 +140,13 @@ class _HomePageState extends ConsumerState<HomePage> {
   String _getAqiDescription(double aqi) {
     if (aqi <= 50) return 'Air quality is satisfactory';
     if (aqi <= 100) return 'Air quality is acceptable';
-    if (aqi <= 150)
+    if (aqi <= 150) {
       return 'Members of sensitive groups may experience health effects';
+    }
     if (aqi <= 200) return 'Everyone may begin to experience health effects';
-    if (aqi <= 300)
+    if (aqi <= 300) {
       return 'Health alert: everyone may experience more serious health effects';
+    }
     return 'Health warning of emergency conditions';
   }
 
@@ -160,7 +167,7 @@ class _HomePageState extends ConsumerState<HomePage> {
       print('Error fetching AI suggestion: $e');
       setState(() {
         _citySuggestions[cityName] =
-        'Failed to load suggestions. Please try again.';
+            'Failed to load suggestions. Please try again.';
       });
     }
   }
@@ -170,26 +177,35 @@ class _HomePageState extends ConsumerState<HomePage> {
     return Scaffold(
       drawer: _buildDrawer(),
       appBar: AppBar(
-        title: const Text(
-          'AQI Checker',
-          style: TextStyle(
+        title: Text(
+          AppLocalizations.of(context)!.dashboard,
+          style: const TextStyle(
             fontWeight: FontWeight.w600,
             letterSpacing: 0.5,
           ),
         ),
         centerTitle: true,
         elevation: 0,
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                AppColors.primaryColor,
-                AppColors.secondaryColor,
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
+        flexibleSpace: Consumer(
+          builder: (c, r, _) {
+            final mode = r.watch(themeProvider);
+            return Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    mode == ThemeMode.dark
+                        ? Colors.black
+                        : AppColors.primaryColor,
+                    mode == ThemeMode.dark
+                        ? Colors.black
+                        : AppColors.secondaryColor,
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+            );
+          },
         ),
         actions: [
           IconButton(
@@ -231,201 +247,258 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   Widget _buildDrawer() {
-    return Drawer(
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.only(
-          topRight: Radius.circular(24),
-          bottomRight: Radius.circular(24),
-        ),
-      ),
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              AppColors.primaryColor.withOpacity(0.95),
-              AppColors.secondaryColor.withOpacity(0.95),
-            ],
+    return Consumer(
+      builder: (c, r, _) {
+        final themeMode = r.watch(themeProvider);
+        final userState = r.watch(authStateProvider);
+
+        final user = userState.value;
+
+        return Drawer(
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.only(
+              topRight: Radius.circular(24),
+              bottomRight: Radius.circular(24),
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Drawer Header with User Info
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
-                child: Column(
-                  children: [
-                    Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 3),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
-                            blurRadius: 10,
-                            offset: const Offset(0, 5),
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  themeMode == ThemeMode.dark
+                      ? Colors.black
+                      : AppColors.primaryColor.withOpacity(0.95),
+                  themeMode == ThemeMode.dark
+                      ? Colors.black
+                      : AppColors.secondaryColor.withOpacity(0.95),
+                ],
+              ),
+            ),
+            child: SafeArea(
+              child: Column(
+                children: [
+                  // Drawer Header with User Info
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 30,
+                      horizontal: 20,
+                    ),
+                    child: Column(
+                      children: [
+                        Container(
+                          width: 80,
+                          height: 80,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 3),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.2),
+                                blurRadius: 10,
+                                offset: const Offset(0, 5),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      child: const CircleAvatar(
-                        backgroundColor: Colors.white,
-                        child: Icon(
-                          Icons.person,
-                          size: 40,
-                          color: AppColors.primaryColor,
+                          child: const CircleAvatar(
+                            backgroundColor: Colors.white,
+                            child: Icon(
+                              Icons.person,
+                              size: 40,
+                              color: AppColors.primaryColor,
+                            ),
+                          ),
                         ),
-                      ),
+                        const SizedBox(height: 16),
+                        Text(
+                          user == null ? 'Guest User' : user.email.toString(),
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+
+                        const SizedBox(height: 4),
+                        if (user == null)
+                          Text(
+                            'Sign in to access more features',
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.8),
+                              fontSize: 14,
+                            ),
+                          ),
+
+                        TextButton(
+                          onPressed: () async {
+                            Navigator.pop(context);
+                            if (user == null) {
+                              context.push(AppPath.login);
+                            } else {
+                              await FirebaseAuth.instance.signOut();
+                            }
+                          },
+                          child: Text(
+                            user == null ? 'Login' : "Logout",
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Guest User',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  ),
+
+                  const Divider(color: Colors.white30, thickness: 1),
+
+                  // Drawer Menu Items
+                  Expanded(
+                    child: ListView(
+                      padding: EdgeInsets.zero,
+                      children: [
+                        _buildDrawerItem(
+                          icon: Icons.dashboard,
+                          title: AppLocalizations.of(context)!.dashboard,
+                          onTap: () {
+                            Navigator.pop(context);
+                            // Navigate to dashboard if needed
+                          },
+                        ),
+                        _buildDrawerItem(
+                          icon: Icons.location_city,
+                          title: AppLocalizations.of(context)!.monitoredCities,
+                          onTap: () {
+                            Navigator.pop(context);
+                            // Scroll to monitored cities section
+                          },
+                        ),
+                        _buildDrawerItem(
+                          icon: Icons.article,
+                          title: AppLocalizations.of(context)!.aqiNews,
+                          onTap: () {
+                            Navigator.pop(context);
+
+                            context.push(AppPath.news);
+                          },
+                        ),
+                        _buildDrawerItem(
+                          icon: Icons.psychology,
+                          title: AppLocalizations.of(
+                            context,
+                          )!.aiRecommendations,
+                          onTap: () {
+                            Navigator.pop(context);
+                            // Show AI recommendations
+                          },
+                        ),
+
+                        const Divider(color: Colors.white30, thickness: 1),
+
+                        _buildDrawerItem(
+                          icon: Icons.person,
+                          title: AppLocalizations.of(context)!.profile,
+                          onTap: () {
+                            Navigator.pop(context);
+                            context.push(AppPath.profile);
+                          },
+                        ),
+
+                        const Divider(color: Colors.white30, thickness: 1),
+
+                        _buildDrawerItem(
+                          icon: Icons.settings,
+                          title: AppLocalizations.of(context)!.settings,
+                          onTap: () {
+                            context.push(AppPath.setting);
+                            Navigator.pop(context);
+                            // Navigate to settings
+                          },
+                        ),
+
+                        _buildDrawerItem(
+                          icon: Icons.help,
+                          title: AppLocalizations.of(context)!.helpSupport,
+                          onTap: () {
+                            Navigator.pop(context);
+                            // Navigate to help
+                          },
+                        ),
+                        _buildDrawerItem(
+                          icon: Icons.money,
+                          title: "Tax 80g calculator",
+                          onTap: () {
+                            context.push(AppPath.tax80GScreen);
+                            Navigator.pop(context);
+                            // Navigate to help
+                          },
+                        ),
+                        _buildDrawerItem(
+                          icon: Icons.description,
+                          title: "AQI Logs",
+                          onTap: () {
+                            context.push(AppPath.logScreen);
+                            Navigator.pop(context);
+                          },
+                        ),
+                        _buildDrawerItem(
+                          icon: Icons.description,
+                          title: "Sensor Data",
+                          onTap: () {
+                            context.push(AppPath.sensorScreen);
+                            Navigator.pop(context);
+                          },
+                        ),
+                        _buildDrawerItem(
+                          icon: Icons.info,
+                          title: AppLocalizations.of(context)!.about,
+                          onTap: () {
+                            Navigator.pop(context);
+                            // Show about dialog
+                          },
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Sign in to access more features',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.8),
-                        fontSize: 14,
-                      ),
+                  ),
+
+                  // Footer
+                  Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      children: [
+                        Text(
+                          'Version 1.0.0',
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.6),
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '© 2024 AQI Checker',
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.6),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-
-              const Divider(color: Colors.white30, thickness: 1),
-
-              // Drawer Menu Items
-              Expanded(
-                child: ListView(
-                  padding: EdgeInsets.zero,
-                  children: [
-                    _buildDrawerItem(
-                      icon: Icons.dashboard,
-                      title: 'Dashboard',
-                      onTap: () {
-                        Navigator.pop(context);
-                        // Navigate to dashboard if needed
-                      },
-                    ),
-                    _buildDrawerItem(
-                      icon: Icons.location_city,
-                      title: 'Monitored Cities',
-                      onTap: () {
-                        Navigator.pop(context);
-                        // Scroll to monitored cities section
-                      },
-                    ),
-                    _buildDrawerItem(
-                      icon: Icons.article,
-                      title: 'AQI News',
-                      onTap: () {
-                        Navigator.pop(context);
-                        context.push('/news');
-                      },
-                    ),
-                    _buildDrawerItem(
-                      icon: Icons.psychology,
-                      title: 'AI Recommendations',
-                      onTap: () {
-                        Navigator.pop(context);
-                        // Show AI recommendations
-                      },
-                    ),
-
-                    const Divider(color: Colors.white30, thickness: 1),
-
-                    _buildDrawerItem(
-                      icon: Icons.person,
-                      title: 'Profile',
-                      onTap: () {
-                        Navigator.pop(context);
-                        context.push(AppPath.userPage);
-                      },
-                    ),
-                    _buildDrawerItem(
-                      icon: Icons.login,
-                      title: 'Login',
-                      onTap: () {
-                        Navigator.pop(context);
-                        context.push(AppPath.login);
-                      },
-                    ),
-                    _buildDrawerItem(
-                      icon: Icons.lock_open,
-                      title: 'Bloc Auth',
-                      onTap: () {
-                        Navigator.pop(context);
-                        context.push(AppPath.login_bloc);
-                      },
-                    ),
-
-                    const Divider(color: Colors.white30, thickness: 1),
-
-                    _buildDrawerItem(
-                      icon: Icons.settings,
-                      title: 'Settings',
-                      onTap: () {
-                        Navigator.pop(context);
-                        // Navigate to settings
-                      },
-                    ),
-                    _buildDrawerItem(
-                      icon: Icons.help,
-                      title: 'Help & Support',
-                      onTap: () {
-                        Navigator.pop(context);
-                        // Navigate to help
-                      },
-                    ),
-                    _buildDrawerItem(
-                      icon: Icons.info,
-                      title: 'About',
-                      onTap: () {
-                        Navigator.pop(context);
-                        // Show about dialog
-                      },
-                    ),
-                  ],
-                ),
-              ),
-
-              // Footer
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  children: [
-                    Text(
-                      'Version 1.0.0',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.6),
-                        fontSize: 12,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '© 2024 AQI Checker',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.6),
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
+  }
+
+  dynamic _openSetting() async {
+    final channel = MethodChannel("open_settings");
+    final bool isWifi = await channel.invokeMethod("openNetworkSettings");
+    if (isWifi) {
+      print("----->on");
+    } else {
+      print("----->offf");
+    }
   }
 
   Widget _buildDrawerItem({
@@ -457,9 +530,7 @@ class _HomePageState extends ConsumerState<HomePage> {
       ),
       onTap: onTap,
       hoverColor: Colors.white.withOpacity(0.1),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     );
   }
 
@@ -483,18 +554,26 @@ class _HomePageState extends ConsumerState<HomePage> {
             ),
             const SizedBox(width: 10),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 final newCity = _controller.text.trim();
                 if (newCity.isNotEmpty) {
                   setState(() {
                     city = newCity;
-                    if (!ref.read(monitoredCitiesProvider).contains(newCity)) {
-                      ref.read(monitoredCitiesProvider.notifier).state = [
-                        ...ref.read(monitoredCitiesProvider),
-                        newCity,
-                      ];
-                    }
                   });
+
+                  final aqiData = await ref.read(aqiProvider(newCity).future);
+
+                  final aqi = aqiData.aqi.toDouble();
+                  final level = _getAqiLevel(aqi);
+
+                  await LogService.writeLog(
+                    city: newCity,
+                    aqi: aqi,
+                    level: level,
+                  );
+
+                  ref.invalidate(aqiReadprovider);
+
                   _controller.clear();
                   FocusScope.of(context).unfocus();
                 }
@@ -580,7 +659,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         final description = _getAqiDescription(aqi);
         final color = _getAqiColor(aqi);
 
-        // Fetch AI suggestion if AQI is above moderate
+        // // Fetch AI suggestion if AQI is above moderate
         if (aqi > 100 && !_citySuggestions.containsKey(city)) {
           _fetchAISuggestion(city, aqi);
         }
@@ -839,19 +918,19 @@ class _HomePageState extends ConsumerState<HomePage> {
             width: double.maxFinite,
             child: _citySuggestions.containsKey(cityName)
                 ? SingleChildScrollView(
-              child: Text(
-                _citySuggestions[cityName]!,
-                style: const TextStyle(fontSize: 14, height: 1.5),
-              ),
-            )
+                    child: Text(
+                      _citySuggestions[cityName]!,
+                      style: const TextStyle(fontSize: 14, height: 1.5),
+                    ),
+                  )
                 : const Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 10),
-                Text('Fetching AI suggestions...'),
-              ],
-            ),
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 10),
+                      Text('Fetching AI suggestions...'),
+                    ],
+                  ),
           ),
           actions: [
             TextButton(
@@ -864,34 +943,47 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
+  final sensorStreamProvider = StreamProvider.autoDispose<double>((ref) {
+    return SensorServiceController.sensorStream();
+  });
+
   Widget _cityGrid() {
     final cities = ["Delhi", "Mumbai", "Bhopal", "Pune"];
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: cities.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
-        childAspectRatio: 1.2,
-      ),
-      itemBuilder: (context, index) {
-        return GetCity(
-          city: cities[index],
-          onAddToMonitor: () {
-            if (!ref.read(monitoredCitiesProvider).contains(cities[index])) {
-              ref.read(monitoredCitiesProvider.notifier).state = [
-                ...ref.read(monitoredCitiesProvider),
-                cities[index],
-              ];
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('${cities[index]} added to monitoring'),
-                  duration: const Duration(seconds: 2),
-                ),
-              );
-            }
+    final sensorAsync = ref.watch(sensorStreamProvider);
+
+    return sensorAsync.when(
+      loading: () => const CircularProgressIndicator(),
+      error: (e, _) => Text("Sensor error"),
+      data: (rotationValue) {
+        final angle = rotationValue * 0.05; // reduce intensity
+
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: cities.length,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            childAspectRatio: 1.2,
+          ),
+          itemBuilder: (context, index) {
+            return Transform.rotate(
+              angle: angle,
+              child: GetCity(
+                city: cities[index],
+                onAddToMonitor: () {
+                  if (!ref
+                      .read(monitoredCitiesProvider)
+                      .contains(cities[index])) {
+                    ref.read(monitoredCitiesProvider.notifier).state = [
+                      ...ref.read(monitoredCitiesProvider),
+                      cities[index],
+                    ];
+                  }
+                },
+              ),
+            );
           },
         );
       },
@@ -922,11 +1014,7 @@ class GetCity extends ConsumerWidget {
   final String city;
   final VoidCallback? onAddToMonitor;
 
-  const GetCity({
-    super.key,
-    required this.city,
-    this.onAddToMonitor,
-  });
+  const GetCity({super.key, required this.city, this.onAddToMonitor});
 
   Color _getAqiColor(double aqi) {
     if (aqi <= 50) return Colors.green;
@@ -942,7 +1030,6 @@ class GetCity extends ConsumerWidget {
     final aqiAsync = ref.watch(aqiProvider(city));
     return aqiAsync.when(
       loading: () => Container(
-
         decoration: BoxDecoration(
           color: Colors.grey[200],
           borderRadius: BorderRadius.circular(20),

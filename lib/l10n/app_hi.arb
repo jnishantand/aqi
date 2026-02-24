@@ -1,0 +1,17 @@
+{
+  "@@locale": "hi",
+  "dashboard": "डैशबोर्ड",
+  "monitoredCities": "निगरानी शहर",
+  "aqiNews": "AQI समाचार",
+  "aiRecommendations": "एआई सुझाव",
+  "profile": "प्रोफ़ाइल",
+  "login": "लॉगिन",
+  "logout": "लॉगआउट",
+  "settings": "सेटिंग्स",
+  "helpSupport": "सहायता और समर्थन",
+  "about": "जानकारी",
+  "guestUser": "अतिथि उपयोगकर्ता",
+  "signInMore": "अधिक सुविधाओं के लिए साइन इन करें",
+  "changeLanguage": "भाषा बदलें",
+  "darkMode": "डार्क मोड"
+}

@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:getaqi/extras/appPath.dart';
 import 'package:go_router/go_router.dart';
 
 class PNVDemoScreen extends StatefulWidget {
+  const PNVDemoScreen({super.key});
+
   @override
   _PNVDemoScreenState createState() => _PNVDemoScreenState();
 }
@@ -29,7 +30,10 @@ class _PNVDemoScreenState extends State<PNVDemoScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text('PNV One-Tap Demo', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            Text(
+              'PNV One-Tap Demo',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
             SizedBox(height: 40),
             TextField(
               controller: _phoneController,
@@ -79,26 +83,33 @@ class _PNVDemoScreenState extends State<PNVDemoScreen> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('✅ PNV Success! One-tap verified in ${DateTime.now().difference(DateTime.now().subtract(Duration(seconds: 2)))}s'),
+                content: Text(
+                  '✅ PNV Success! One-tap verified in ${DateTime.now().difference(DateTime.now().subtract(Duration(seconds: 2)))}s',
+                ),
                 backgroundColor: Colors.green,
                 duration: Duration(seconds: 3),
               ),
             );
             setState(() => _isVerifying = false);
             // Navigate to home screen
-          context.push(AppPath.homePage);
+            context.push(AppPath.homePage);
           }
         },
         verificationFailed: (FirebaseAuthException e) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('❌ Error: ${e.message}'), backgroundColor: Colors.red),
+            SnackBar(
+              content: Text('❌ Error: ${e.message}'),
+              backgroundColor: Colors.red,
+            ),
           );
           setState(() => _isVerifying = false);
         },
         codeSent: (String verificationId, int? resendToken) {
           // Fallback: SMS flow (PNV not supported)
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('📱 SMS sent (PNV not supported on this device)')),
+            SnackBar(
+              content: Text('📱 SMS sent (PNV not supported on this device)'),
+            ),
           );
           setState(() => _isVerifying = false);
         },

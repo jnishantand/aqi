@@ -1,109 +1,95 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import '../auth/auth_service.dart';
 
-class PNVDemoScreen extends StatefulWidget {
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
   @override
-  _PNVDemoScreenState createState() => _PNVDemoScreenState();
+  State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _PNVDemoScreenState extends State<PNVDemoScreen> {
-  final TextEditingController _phoneController = TextEditingController();
-  bool _isVerifying = false;
+class _LoginScreenState extends State<LoginScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Offset> _slideAnimation;
+  late Animation<double> _fadeAnimation;
 
   @override
   void initState() {
     super.initState();
-    // Pre-fill test phone for India (+91)
-    _phoneController.text = '+917000000000'; // Your real SIM number
+
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, -1.5),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
+
+    _fadeAnimation = Tween<double>(begin: 0, end: 1).animate(_controller);
+
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleLogin() async {
+    final user = await AuthService().signInWithGoogle();
+    if (user == null) return;
+
+    final userRef = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.user!.uid);
+    final snapshot = await userRef.get();
+
+    if (!snapshot.exists) {
+      await userRef.set({
+        'email': user.user!.email,
+        'darkMode': false,
+        'language': 'en',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    }
+
+    print('Login Success: ${user.user?.email}');
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('PNV One-Tap Test')),
-      body: Padding(
-        padding: EdgeInsets.all(24),
+      body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text('PNV One-Tap Demo', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-            SizedBox(height: 40),
-            TextField(
-              controller: _phoneController,
-              keyboardType: TextInputType.phone,
-              enabled: !_isVerifying,
-              decoration: InputDecoration(
-                labelText: 'Phone Number',
-                border: OutlineInputBorder(),
-              ),
+            const Text(
+              "Login With Google",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
-            SizedBox(height: 32),
-            ElevatedButton(
-              onPressed: _isVerifying ? null : _startPNV,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(horizontal: 40, vertical: 16),
-                textStyle: TextStyle(fontSize: 18),
+            const SizedBox(height: 10),
+            SlideTransition(
+              position: _slideAnimation,
+              child: FadeTransition(
+                opacity: _fadeAnimation,
+                child: IconButton(
+                  onPressed: _handleLogin,
+                  icon: SvgPicture.asset(
+                    'assets/icons/google.svg',
+                    width: 60,
+                    height: 60,
+                  ),
+                ),
               ),
-              child: _isVerifying
-                  ? CircularProgressIndicator(color: Colors.white)
-                  : Text('🔐 One-Tap Verify'),
-            ),
-            SizedBox(height: 24),
-            Text(
-              '📱 Test on REAL DEVICE with SIM + WiFi\n⏱️ PNV: 1-3 seconds auto-complete',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
             ),
           ],
         ),
       ),
     );
-  }
-
-  Future<void> _startPNV() async {
-    setState(() => _isVerifying = true);
-
-    try {
-      await FirebaseAuth.instance.verifyPhoneNumber(
-        phoneNumber: _phoneController.text.trim(),
-        timeout: Duration(seconds: 30),
-        verificationCompleted: (PhoneAuthCredential credential) async {
-          // 🚀 PNV SUCCESS! One-tap complete (no code needed)
-          await FirebaseAuth.instance.signInWithCredential(credential);
-
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('✅ PNV Success! One-tap verified in ${DateTime.now().difference(DateTime.now().subtract(Duration(seconds: 2)))}s'),
-                backgroundColor: Colors.green,
-                duration: Duration(seconds: 3),
-              ),
-            );
-            setState(() => _isVerifying = false);
-            // Navigate to home screen
-            Navigator.pushReplacementNamed(context, '/home');
-          }
-        },
-        verificationFailed: (FirebaseAuthException e) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('❌ Error: ${e.message}'), backgroundColor: Colors.red),
-          );
-          setState(() => _isVerifying = false);
-        },
-        codeSent: (String verificationId, int? resendToken) {
-          // Fallback: SMS flow (PNV not supported)
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('📱 SMS sent (PNV not supported on this device)')),
-          );
-          setState(() => _isVerifying = false);
-        },
-        codeAutoRetrievalTimeout: (String verificationId) {},
-      );
-    } catch (e) {
-      setState(() => _isVerifying = false);
-    }
   }
 }

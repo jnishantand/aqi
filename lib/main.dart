@@ -1,56 +1,105 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:getaqi/extras/appPath.dart';
-import 'package:getaqi/providers/countProviders/counter_provider.dart';
-import 'package:getaqi/screens/one_tap_auth_screen.dart';
-import 'package:getaqi/ui/homePage.dart' show HomePage;
-import 'package:getaqi/ui/login/login.dart' hide PNVDemoScreen;
-import 'package:getaqi/ui/users/users_list.dart';
-import 'package:go_router/go_router.dart';
-
+import 'package:getaqi/background/background_worker.dart';
+import 'package:getaqi/l10n/app_localizations.dart';
+import 'package:getaqi/providers/providers.dart';
+import 'package:workmanager/workmanager.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
-  // ✅ THIS LINE IS CRITICAL - Initialize Flutter binding first
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // ✅ Then initialize Firebase
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
+  await Workmanager().initialize(callbackDispatcher, isInDebugMode: true);
+
+  await Workmanager().registerPeriodicTask(
+    "aqiTaskId",
+    aqiTask,
+    frequency: const Duration(minutes: 5),
+    existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
   );
-
-  // ✅ Finally run your app
-  runApp(ProviderScope(child: MyApp()));
+  runApp(const ProviderScope(child: MyApp()));
 }
 
-class MyApp extends StatefulWidget {
+class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   @override
-  State<MyApp> createState() => _MyAppState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final userSettingsAsync = ref.watch(userSettingsProvider);
 
-class _MyAppState extends State<MyApp> {
-  int count = 0;
+    //preseting values from firebase user specific
+    userSettingsAsync.whenData((data) {
+      Future.microtask(() {
+        final language = data['language'] ?? 'en';
+        final darkMode = data['darkMode'] ?? false;
 
-  @override
-  Widget build(BuildContext context) {
+        if (ref.read(localeProvider) != Locale(language)) {
+          ref.read(localeProvider.notifier).state = Locale(language);
+        }
+
+        final newTheme = darkMode ? ThemeMode.dark : ThemeMode.light;
+        if (ref.read(themeProvider) != newTheme) {
+          ref.read(themeProvider.notifier).state = newTheme;
+        }
+      });
+    });
+
+    final theme = ref.watch(themeProvider);
+    final locale = ref.watch(localeProvider);
+    final router = ref.watch(goRouterProvider);
+
     return MaterialApp.router(
+      routerConfig: router,
+      locale: locale,
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
       debugShowCheckedModeBanner: false,
       theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.blue),
-      routerConfig: _goRouter,
+      darkTheme: ThemeData.dark(),
+      themeMode: theme,
     );
   }
 }
 
-final GoRouter _goRouter = GoRouter(
-  routes: [
-    GoRoute(path: AppPath.homePage, builder: (c, s) => HomePage()),
-    GoRoute(path: AppPath.userPage, builder: (c, s) => UsersList()),
-    GoRoute(path: AppPath.login, builder: (c, s) => PNVDemoScreen()),
-    GoRoute(path: AppPath.login_bloc, builder: (c, s) => PNVDemoScreen()),
+class _MyAppState extends ConsumerState<MyApp> {
+  @override
+  Widget build(BuildContext context) {
+    // Watch the Firestore user settings stream
+    final userSettingsAsync = ref.watch(userSettingsProvider);
 
+    userSettingsAsync.whenData((data) {
+      final language = data['language'] ?? 'en';
+      final darkMode = data['darkMode'] ?? false;
 
-  ],
-);
+      Future.microtask(() {
+        // Only update if different from current provider value
+        if (ref.read(localeProvider) != Locale(language)) {
+          ref.read(localeProvider.notifier).state = Locale(language);
+        }
+
+        final currentTheme = ref.read(themeProvider);
+        final newTheme = darkMode ? ThemeMode.dark : ThemeMode.light;
+        if (currentTheme != newTheme) {
+          ref.read(themeProvider.notifier).state = newTheme;
+        }
+      });
+    });
+
+    final theme = ref.watch(themeProvider);
+    final locale = ref.watch(localeProvider);
+    final router = ref.watch(goRouterProvider);
+
+    return MaterialApp.router(
+      routerConfig: router,
+      locale: locale,
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.blue),
+      darkTheme: ThemeData.dark(),
+      themeMode: theme,
+    );
+  }
+}
