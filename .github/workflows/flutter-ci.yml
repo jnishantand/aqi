@@ -17,7 +17,8 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.13.0'
+          flutter-version: '3.38.6'
+          channel: stable
 
       - run: flutter pub get
       - run: flutter test
@@ -34,7 +35,8 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.13.0'
+          flutter-version: '3.38.6'
+          channel: stable
 
       - run: flutter pub get
       - run: flutter build apk --release
