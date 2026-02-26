@@ -1,5 +1,4 @@
 import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class SensorServiceController {
   static const MethodChannel _channel = MethodChannel('sensor_service_channel');

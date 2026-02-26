@@ -30,7 +30,7 @@ final aiSuggestionProvider = FutureProvider.autoDispose.family<String, Map<Strin
   final apiKey = dotenv.env['DEEPSEEK_API_KEY'] ?? '';
 
   if (apiKey.isEmpty) {
-    return '⚠️ API key not configured. Please add DEEPSEEK_API_KEY to .env file';
+    return ' API key not configured. Please add DEEPSEEK_API_KEY to .env file';
   }
 
   try {
@@ -369,6 +369,15 @@ class _HomePageState extends ConsumerState<HomePage> {
                           onTap: () {
                             Navigator.pop(context);
                             // Scroll to monitored cities section
+                          },
+                        ),
+                        _buildDrawerItem(
+                          icon: Icons.location_city,
+                          title: "Image Process",
+                          onTap: () {
+                            Navigator.pop(context);
+                            // Scroll to monitored cities section
+                            context.push(AppPath.imageProcess);
                           },
                         ),
                         _buildDrawerItem(
@@ -826,7 +835,6 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   Widget _monitoredCityCard(String cityName) {
     final aqiAsync = ref.watch(aqiProvider(cityName));
-
     return aqiAsync.when(
       loading: () => Card(
         margin: const EdgeInsets.only(bottom: 8),
