@@ -1,7 +1,5 @@
 import 'package:getaqi/Services/aqi_log_service.dart';
-import 'package:sensors_plus/sensors_plus.dart';
 import 'package:workmanager/workmanager.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 const String aqiTask = "fetchAqiTask";
 
@@ -17,7 +15,6 @@ void callbackDispatcher() {
         level: "Medium",
         sensordata: "No data",
       ); // Important: reinitialize any plugins or services you need here, as this runs in a separate isolate
-
       return Future.value(true);
     } catch (e) {
       return Future.value(false);

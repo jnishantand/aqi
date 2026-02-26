@@ -6,6 +6,8 @@ import 'package:getaqi/features/sensor_read/sensorController.dart';
 import 'package:path_provider/path_provider.dart';
 
 class SensorScreen extends StatefulWidget {
+  const SensorScreen({super.key});
+
   @override
   State<SensorScreen> createState() => _SensorScreenState();
 }

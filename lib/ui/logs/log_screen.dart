@@ -5,6 +5,7 @@ import 'package:getaqi/Services/aqi_log_service.dart';
 class LogScreen extends ConsumerStatefulWidget {
   const LogScreen({super.key});
 
+  @override
   ConsumerState<LogScreen> createState() => _LogScreenState();
 }
 

@@ -9,6 +9,6 @@ class AppPath {
   static String tax80GScreen = "/tax80GScreen";
   static String logScreen = "/logScreen";
   static String userScreen = "/usercreen";
-
+  static String imageProcess = "/imageProcess";
   static String sensorScreen = "/sensorScreen";
 }
